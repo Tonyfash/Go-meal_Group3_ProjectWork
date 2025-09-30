@@ -10,10 +10,10 @@ exports.checkLogin = (req, res, next) => {
       message: "Kindly login"
     });
   }
-    const checkValidToken = jwt.verify(token.split(" ")[1],"deniel", async (error, result) =>{
+    const checkValidToken = jwt.verify(token.split(" ")[1],"cat", async (error, result) =>{
         if(error){
             return res.status(401).json({
-                message: "Login seession expired, please login again"
+                message: "Login session expired, please login again"
             });
         }else{
             const user = await userModel.findById(result.id);
