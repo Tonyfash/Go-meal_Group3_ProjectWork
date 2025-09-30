@@ -65,7 +65,7 @@ if (file && file.path) {
     
 
     await sendMail(detail)
-    await newUser.save();
+    // await newUser.save();
 
     // const subject = "Kindly verify your Email";
     // const link = `${req.protocol}://${req.get("host")}/api/v1/verify/${newUser._id}`

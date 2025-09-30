@@ -1,5 +1,5 @@
 const watermark = 'https://res.cloudinary.com/dbzzkaa97/image/upload/v1754353355/watermark_fdbzah.png';
-const logo = 'https://res.cloudinary.com/dbzzkaa97/image/upload/v1754353355/logo_v2s6ow.png';
+const logo = 'https://res.cloudinary.com/ddmh8i1m1/image/upload/v1759228791/logo1_qmce8b.png';
 const linkedIn = 'https://res.cloudinary.com/dbzzkaa97/image/upload/v1754433533/linkedIn_ggxxm4.png';
 const instagram = 'https://res.cloudinary.com/dbzzkaa97/image/upload/v1754433533/instagram_p8byzw.png';
 const facebook = 'https://res.cloudinary.com/dbzzkaa97/image/upload/v1754433532/facebook_rjeokq.png';
@@ -51,7 +51,7 @@ return `
               <td align="center">
                 <h3 style="margin: 0; font-size: 25px;">GoMeal</h3>
                 <p style="margin: 8px 0 20px; font-size: 12px;">
-                  Gomeal. Making everyday deliveries faster, easier, and<br>right when you need them.
+                  Go-Meal. Making everyday deliveries faster, easier, and<br>right when you need them.
                 </p>
                 <table cellpadding="5" cellspacing="0" style="margin: 10px 0; text-align: center;">
                   <tr>
