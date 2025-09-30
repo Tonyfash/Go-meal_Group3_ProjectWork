@@ -1,13 +1,22 @@
 require('dotenv').config();
+const cors = require("cors");
 
 const express = require('express');
 const mongoose = require('mongoose');
 const PORT = process.env.PORT || 1234;
-const db = process.env.MONGO_DB
+const db = process.env.MONGO_DB;
+const userRouter = require("./router/user");
+const paymentRouter = require("./router/payment")
+const productRouter = require("./router/product")
+const jwt = require("jsonwebtoken");
 
 const app = express();
 
 app.use(express.json());
+app.use(cors());
+app.use('/api/v1', userRouter);
+app.use('/api/v1', paymentRouter);
+app.use('/api/v1', productRouter);
 
 
 mongoose.connect(db).then(()=>{
