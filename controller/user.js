@@ -303,8 +303,7 @@ exports.resetPassword = async (req, res) => {
 exports.changePassword = async (req, res) => {
   try {
     const { oldPassword, newPassword, confirmPassword } = req.body;
-  
-
+    
     if (!oldPassword || !newPassword || !confirmPassword) {
       return res.status(400).json({
         message: 'All fields are required'
