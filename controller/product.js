@@ -519,8 +519,7 @@ exports.seedProducts = async (req, res) => {
         const productsData = kitchenProducts[kitchenName][categoryName].map((p) => ({
           ...p,
           kitchen: kitchen._id,
-          category: category._id,
-          productImage: "",
+          category: category._id
         }));
 
         const insertedProducts = await Product.insertMany(productsData);
