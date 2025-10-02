@@ -1,8 +1,16 @@
-const { createProduct } = require('../controller/product');
-const uploads = require('../middleware/multer');
 
-const router = require('express').Router();
+const express = require("express");
+const router = express.Router();
 
-router.post('/create-product', uploads.array('productImages', 5), createProduct);
+const { seedProducts, getAllProducts, getProduct, getProductsByCategory } = require("../controller/product");
+
+
+router.post("/seedProducts", seedProducts);
+
+router.get("/products", getAllProducts);
+
+router.get("/product/:id", getProduct);
+
+router.get("/products/category/:categoryId", getProductsByCategory);
 
 module.exports = router;

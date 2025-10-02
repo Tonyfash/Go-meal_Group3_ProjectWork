@@ -1,18 +1,32 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
-const kitchenSchema = new mongoose.Schema({
-    productId: {
+const kitchenSchema = new mongoose.Schema(
+  {
+    kitchenName: {
+      type: String,
+      required: true,
+      unique: true,
+    },
+    kitchenLogo: {
+      type: String,
+      required: true,
+      unique: true,
+    },
+    description: {
+      type: String,
+      required: true,
+      unique: true,
+    },
+    categories: [
+      {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'products'
-    },
-    kitchenName:{
-        type: String,
-        required: true,
-        trim: true,
-        unique: true
-    },
-}, {timestamps: true})
+        ref: "Category",
+      },
+    ],
+  },
+  { timestamps: true }
+);
 
-const kitchenModel = mongoose.model('Kitchen', kitchenSchema);
+const Kitchen = mongoose.model("Kitchen", kitchenSchema);
 
-module.exports = kitchenModel
+module.exports = Kitchen;
