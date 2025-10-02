@@ -8,12 +8,11 @@ const html = require("../middleware/signUp");
 const { sendMail } = require("../middleware/email");
 const { forgethtml } = require("../middleware/forget");
 const axios = require("axios");
-
 const { registerOTP } = require("../middleware/otpmail");
 
 exports.register = async (req, res) => {
   try {
-    const { firstName, lastName, email, phoneNumber, password, confirmPassword } = req.body;
+    const { firstName, lastName, email, phoneNumber, password } = req.body;
     const file = req.file;
 
     let response;
@@ -36,7 +35,7 @@ exports.register = async (req, res) => {
       firstName,
       lastName,
       email: email.toLowerCase(),
-      phoneNumber: `+234${phoneNumber.slice(1)}`,
+      phoneNumber,
       password: hashPassword,
       otp: otp,
       otpExpiredAt: Date.now() + 1000 * 120,
@@ -57,7 +56,22 @@ exports.register = async (req, res) => {
     };
 
     await sendMail(detail);
+    await newUser.save();
 
+    // const subject = "Kindly verify your Email";
+    // const link = `${req.protocol}://${req.get("host")}/api/v1/verify/${newUser._id}`
+    // const message = `<p>Hi ${newUser.firstName},</p>
+    //                  <p>Thank you for registering on our platform. Please click the link below to verify your email address:</p>
+    //                  <a href="${link}">Verify Email</a>
+    //                  <p>If you did not register on our platform, please ignore this email.</p>
+    //                  <p>Best regards,</p>
+    //                  <p>The GoMeal Team</p>`;
+
+    // await sendMail({
+    //     to:email,
+    //     subject,
+    //     html: html(link, newUser.firstName)
+    // })
     let info = {
       firstName: newUser.firstName,
       email: newUser.email,
@@ -69,7 +83,6 @@ exports.register = async (req, res) => {
     });
   } catch (error) {
     console.log(error);
-    //fs.unlinkSync(file.path)
     res.status(500).json({
       message: `Internal Server Error` + error.message,
     });
