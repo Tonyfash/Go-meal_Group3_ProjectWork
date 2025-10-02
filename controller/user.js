@@ -9,6 +9,7 @@ const sendMail = require("../middleware/email");
 const { forgethtml } = require("../middleware/forget");
 const axios = require("axios");
 const { registerOTP } = require("../middleware/otpmail");
+const path = require("path");
 
 exports.register = async (req, res) => {
   try {
@@ -21,7 +22,9 @@ exports.register = async (req, res) => {
     const existingPhoneNumber = await userModel.findOne({ phoneNumber });
 
     if (existingEmail || existingPhoneNumber) {
-      fs.unlinkSync(file.path);
+      if (file && file.path) {
+        fs.unlinkSync(file.path);
+      }
       return res.status(400).json({
         message: "User with that email or phone number already exists",
       });
