@@ -1,35 +1,26 @@
-const nodemailer = require("nodemailer");
+const axios = require("axios");
 
-
-exports.sendMail = async (user) => {
-    try{
-          const transporter = nodemailer.createTransport({
-          service: "gmail",
-          port: 587,
-          secure: false, // true for 465, false for other ports
-          auth: {
-          user: process.env.email,
-          pass: process.env.pass,
+const sendMail = async (options) => {
+  try {
+    const response = await axios.post(
+      "https://api.brevo.com/v3/smtp/email",
+      {
+        sender: { email: process.env.BREVO_USER, name: "Go-Meal" },
+        to: [{ email: options.email }],
+        subject: options.subject,
+        htmlContent: options.html,
+      },
+      {
+        headers: {
+          "api-key": process.env.BREVO_API_KEY,
+          "Content-Type": "application/json",
         },
-    });
+      }
+    );
+    console.log("Email sent successfully:", response.data);
+  } catch (error) {
+    console.error("Error sending email:", error.response ? error.response.data : error.message);
+  }
+};
 
-
-  const info = await transporter.sendMail({
-    from:`GoMeal <${process.env.email}`,
-    to: user.email,
-    subject: user.subject,
-    html: user.html,
-  });
-
-     console.log(`Message sent : ${info.messageId}`);
-        return info;
-}
-    catch(error){
-       console.error(`error sending email: ${error.message}`);
-       throw error;
-       
-    }
-
-}
-console.log("User:", process.env.MAILGUN_DOMAIN_NAME);
-console.log("Pass:", process.env.MAILGUN_SMTP_PASSWORD ? "Loaded ✅" : "Missing ❌");
+module.exports = sendMail;
