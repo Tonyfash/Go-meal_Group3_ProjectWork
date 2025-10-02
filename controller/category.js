@@ -1,5 +1,5 @@
-const categoryModel = require('../model/category');
-const Kitchen = require('../model/kitchen');
+const categoryModel = require("../model/category");
+const Kitchen = require("../model/kitchen");
 
 exports.seedCategories = async (req, res) => {
   try {
@@ -9,7 +9,7 @@ exports.seedCategories = async (req, res) => {
       "Heritage Kitchen": ["Classic & Comfort Breakfasts", "Quick Grab-and-Go", "Beverage Add-Ons"],
       "Renee’s Kitchen": ["Classic Continental Breakfasts", "Healthy Picks", "Beverages Add-Ons"],
       "Mama Kitchen": ["Classic & Comfort Breakfasts", "Quick Grap-and-Go", "Beverage Add-Ons"],
-      "Kayliz's Kitchen": ["Classic Conitinental Breakfasts", "Halthy Picks", "Beverage Add-Ons"]
+      "Kayliz's Kitchen": ["Classic Conitinental Breakfasts", "Halthy Picks", "Beverage Add-Ons"],
     };
 
     let created = [];
@@ -18,14 +18,14 @@ exports.seedCategories = async (req, res) => {
       const kitchen = await Kitchen.findOne({ kitchenName });
       if (!kitchen) continue;
 
-      const categoriesData = kitchenCategories[kitchenName].map(cat => ({
+      const categoriesData = kitchenCategories[kitchenName].map((cat) => ({
         name: cat,
-        kitchen: kitchen._id
+        kitchen: kitchen._id,
       }));
 
       const categories = await categoryModel.insertMany(categoriesData);
 
-      kitchen.categories = categories.map(c => c._id);
+      kitchen.categories = categories.map((c) => c._id);
       await kitchen.save();
 
       created.push(...categories);
@@ -34,18 +34,15 @@ exports.seedCategories = async (req, res) => {
     res.status(201).json({
       success: true,
       message: "Categories seeded successfully for all kitchens!",
-      data: created
+      data: created,
     });
-
   } catch (err) {
     res.status(500).json({
       success: false,
-      error: err.message
+      message: err.message,
     });
   }
 };
-
-
 
 exports.getCategoriesByKitchen = async (req, res) => {
   try {
@@ -56,47 +53,47 @@ exports.getCategoriesByKitchen = async (req, res) => {
     if (!categories.length) {
       return res.status(404).json({
         success: false,
-        message: "No categories found for this kitchen"
+        message: "No categories found for this kitchen",
       });
     }
 
     res.status(200).json({
       success: true,
       count: categories.length,
-      data: categories
+      data: categories,
+      message: "Categories retrieved successfully",
     });
   } catch (err) {
     res.status(500).json({
       success: false,
-      error: err.message
+    message: err.message,
     });
   }
 };
 
-
-
-exports.getCategoriesById = async (req, res) => { 
+exports.getCategoriesById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const categories = await categoryModel.findById(id)
+    const categories = await categoryModel.findById(id);
 
     if (!categories) {
       return res.status(404).json({
         success: false,
-        message: "No categories found"
+        message: "No categories found",
       });
     }
 
     res.status(200).json({
       success: true,
       count: categories.length,
-      data: categories 
+      data: categories,
+      message: "Category retrieved successfully",
     });
   } catch (err) {
     res.status(500).json({
       success: false,
-      error: err.message
+      message: err.message,
     });
   }
 };

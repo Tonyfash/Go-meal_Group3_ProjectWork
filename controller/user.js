@@ -5,7 +5,7 @@ const cloudinary = require("../config/cloudinary");
 const fs = require("fs");
 const e = require("cors");
 const html = require("../middleware/signUp");
-const  sendMail  = require("../middleware/email");
+const sendMail = require("../middleware/email");
 const { forgethtml } = require("../middleware/forget");
 const axios = require("axios");
 const { registerOTP } = require("../middleware/otpmail");
@@ -72,7 +72,7 @@ exports.register = async (req, res) => {
     //     subject,
     //     html: html(link, newUser.firstName)
     // })
-    
+
     let info = {
       firstName: newUser.firstName,
       email: newUser.email,

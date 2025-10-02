@@ -11,5 +11,4 @@ router.get("/product/:id", getProduct);
 
 router.get("/products/category/:categoryId", getProductsByCategory);
 
-
 module.exports = router;

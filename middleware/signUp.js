@@ -1,5 +1,5 @@
-const html=(verifyLink,firstName)=>{
-    return `
+const html = (verifyLink, firstName) => {
+  return `
     <!DOCTYPE html>
     <html lang="en">
     <head>
@@ -88,7 +88,7 @@ const html=(verifyLink,firstName)=>{
     </html>
     
   
-    `
-}
+    `;
+};
 
-module.exports=html
+module.exports = html;
