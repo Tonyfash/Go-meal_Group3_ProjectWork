@@ -1,7 +1,9 @@
 const multer = require("multer");
+const fs = require('fs');
 
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
+        fs.mkdirSync('./images', { recursive: true });
         cb(null, './images');
     },
     filename: function (req, file, cb) {
