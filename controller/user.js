@@ -8,9 +8,6 @@ const html = require('../middleware/signUp');
 const { sendMail } = require('../middleware/email');
 const { forgethtml } = require('../middleware/forget');
 const axios = require('axios');
-
-
-const nodemailer = require("nodemailer");
 const {registerOTP} = require("../middleware/otpmail")
 
 
@@ -87,7 +84,7 @@ if (file && file.path) {
     }
 
     res.status(201).json({
-        message: `Successful Registered ${email}`,
+        message: `Successfully Registered ${email}`,
         data: info
     })
   
@@ -190,7 +187,6 @@ exports.verifyCode = async (req, res) => {
     })
   }
 };
-
 
 exports.resendCode = async (req, res) => {
     try {

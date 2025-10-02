@@ -19,6 +19,19 @@ app.use('/api/v1', paymentRouter);
 app.use('/api/v1', productRouter);
 
 
+app.get("/", (req, res)=>{
+    res.send("Welcome to the Go-meal App!")
+})
+
+app.use((error, req, res, next)=>{
+    if(error){
+        return res.status(500).json({
+            message: error.message
+        })
+    }
+    next()
+})
+
 mongoose.connect(db).then(()=>{
     console.log(`Connected to the database successfully`);
     app.listen(PORT, ()=>{

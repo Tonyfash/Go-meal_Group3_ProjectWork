@@ -1,34 +1,43 @@
 const productModel = require('../model/product');
+const fs = require('fs');
+const cloudinary = require('../config/cloudinary');
 
 
 exports.createProduct = async (req, res) => {
   try {
-    const { productName, price } = req.body;
-    const existProduct = await productModel.findOne({ productName: productName });
+        const {productName, price} = req.body;
+        const files = req.files;
+        let response;
+        let listOfProducts = [];
+        let product = {};
 
-    if (existProduct) {
-      return res.status(400).json({
-        message: 'Product already exist'
-      })
-    };
-
-    const product = new productModel({
-      productName,
-      price
-    });
-
-    await product.save();
-    res.status(201).json({
-      message: 'Product created successfully',
-      data: product
-    })
-  } catch (error) {
-    res.status(500).json({
-      message: `Error creating product: ${error.message}`
-    })
-  }
+        if (files && files.length > 0) {
+            for (const file of files) {
+                response = await cloudinary.uploader.upload(file.path);
+                product = {
+                    imageUrl: response.secure_url,
+                    publicId: response.public_id
+                };
+                listOfProducts.push(product);
+                fs.unlinkSync(file.path)
+            }
+        };
+        const products = await productModel.create({
+            productName,
+            price,
+            productImages: listOfProducts
+        })
+        res.status(201).json({
+            message: 'Products created successfully',
+            data: products
+        })
+    } catch (error) {
+        console.log(error)
+        res.status(500).json({
+            message: `Internal Server Error:  ${error.message}`
+        })
+    }
 };
-
 
 exports.getAll = async (req, res) => {
   try {
