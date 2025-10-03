@@ -1,4 +1,3 @@
-// router/cart.js
 const express = require("express");
 const { addToCart, getCart, updateCart, clearCart } = require("../controller/cart");
 
