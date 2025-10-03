@@ -13,7 +13,7 @@ const {
 
 const uploads = require("../middleware/multer");
 const { checkLogin } = require("../middleware/auth");
-const { resendValidator, verifyValidator, registerValidator } = require("../middleware/validator");
+const { resendValidator, verifyValidator, registerValidator, resetPasswordValidator } = require("../middleware/validator");
 
 const router = require("express").Router();
 router.post("/register", uploads.single("profilePicture"), registerValidator, register);
@@ -26,7 +26,7 @@ router.post("/verify-code", verifyValidator, verifyCode);
 router.get("/", checkAuth);
 
 router.post("/password", forgetPassword);
-router.post("/reset/:id", resetPassword);
+router.post("/reset/:id", resetPasswordValidator, resetPassword);
 router.put("/password", checkLogin, changePassword);
 
 module.exports = router;

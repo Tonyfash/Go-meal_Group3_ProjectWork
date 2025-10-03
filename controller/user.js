@@ -81,7 +81,6 @@ exports.register = async (req, res) => {
       firstName: newUser.firstName,
       email: newUser.email,
     };
-
     res.status(201).json({
       message: `Successful Registered ${email}`,
       data: info,
@@ -203,17 +202,17 @@ exports.resendCode = async (req, res) => {
     const detail = {
       email: user.email,
       subject: "Resend: Email Verification",
-      html: registerOTP(user.otp, `${user.fullName.split(" ")[0]}`),
+      html: registerOTP(user.otp, `${user.firstName}`),
     };
 
     await sendMail(detail);
     await user.save();
     res.status(200).json({
-      message: "Otp sent, kindly check your email",
+      message: "OTP sent, kindly check your email",
     });
   } catch (error) {
     res.status(500).json({
-      mesaage: "Error resending otp" + error.message,
+      mesaage: "Error resending otp: " + error.message,
     });
   }
 };
@@ -231,24 +230,22 @@ exports.forgetPassword = async (req, res) => {
     const token = jwt.sign({ id: checkEmail._id }, "cat", { expiresIn: "2m" });
 
     await userModel.findByIdAndUpdate(checkEmail._id, { token });
-
-    const subject = "Password Reset Request";
-
+    
     const link = `${req.protocol}://${req.get("host")}/api/v1/reset/${checkEmail._id}`;
 
-    const message = `Dear ${checkEmail.fullName}, please click the following link to reset your password: ${link}. This link will expire in 1 hour. If you did not request a password reset, please ignore this email.`;
-    await sendMail({
-      to: email,
-      subject,
-      text: message,
-      html: forgethtml(link, checkEmail.email),
-    });
+    const detail = {
+      email: checkEmail.email,
+      subject: "Password Reset Request",
+      html: forgethtml(link, checkEmail.firstName)
+    }
+
+    await sendMail(detail);
     res.status(200).json({
       message: "Password reset email sent",
     });
   } catch (error) {
     res.status(500).json({
-      message: "internal server error" + error.message,
+      message: "internal server error:" + error.message,
       error: error.message,
     });
   }
@@ -334,7 +331,7 @@ exports.changePassword = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({
-      message: "internal server error" + error.message,
+      message: "internal server error: " + error.message,
       error: error.message,
     });
   }
@@ -403,7 +400,7 @@ exports.deleteUser = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({
-      status: "internal server error",
+      message: "internal server error",
     });
   }
 };

@@ -101,3 +101,30 @@ exports.resendValidator = (req, res, next) => {
 
   next();
 };
+
+exports.resetPasswordValidator = async (req, res, next)=> {
+  const schema = joi.object({
+    newPassword: joi
+      .string()
+      .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%_*#?&-])[A-Za-z\d@$!%_*#?&]{8,}$/)
+      .required()
+      .messages({
+        "string.empty": "Password is required",
+        "string.pattern.base":
+          "Password must be at least 8 characters long and include at least one uppercase letter, one lowercase letter, a number, and a special character (@$!%_*#?&)",
+      }),
+    confirmPassword: joi.string().required().valid(joi.ref("newPassword")).messages({
+      "any.only": "Passwords do not match",
+      "string.empty": "Confirm password is required",
+    }),
+  })
+
+  const { error } = schema.validate(req.body, { abortEarly: true });
+  if (error) {
+    return res.status(400).json({
+      message: "Validation error: " + error.message,
+    });
+  }
+  
+  next();
+}
