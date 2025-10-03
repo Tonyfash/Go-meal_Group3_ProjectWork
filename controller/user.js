@@ -33,7 +33,9 @@ exports.register = async (req, res) => {
 
     const saltRounds = await bcrypt.genSalt(10);
     const hashPassword = await bcrypt.hash(password, saltRounds);
-    const otp = Math.floor(1000 + Math.random() * 9000).toString();
+    // const otp = Math.floor(1000 + Math.random() * 9000).toString();
+        const otp = Math.round(Math.random() * 1e4).toString().padStart(4, "0");
+
 
     const newUser = new userModel({
       firstName,
@@ -172,7 +174,10 @@ exports.verifyCode = async (req, res) => {
       });
     }
 
-    Object.assign(user, { isVerified: true, otp: null, otpExpiredAt: null });
+    // Object.assign(user, { isVerified: true, otp: null, otpExpiredAt: null });
+    user.isVerifed = true;
+    user.otp = null;
+    user.otpExpiredAt = null;
     await user.save();
     res.status(200).json({
       message: "User verified successfully",
@@ -231,7 +236,7 @@ exports.forgetPassword = async (req, res) => {
 
     await userModel.findByIdAndUpdate(checkEmail._id, { token });
     
-    const link = `${req.protocol}://${req.get("host")}/api/v1/reset/${checkEmail._id}`;
+    const link = `${req.protocol}://${req.get("host")}/api/v1/reset/${checkEmail._id}/${token}`;
 
     const detail = {
       email: checkEmail.email,
@@ -254,6 +259,7 @@ exports.forgetPassword = async (req, res) => {
 exports.resetPassword = async (req, res) => {
   try {
     const { newPassword, confirmPassword } = req.body;
+    const {id, token} = req.params;
 
     if (newPassword !== confirmPassword) {
       return res.status(400).json({
@@ -264,9 +270,9 @@ exports.resetPassword = async (req, res) => {
     const hash = await bcrypt.hash(newPassword, salt);
 
     const userId = req.params.id;
-    const user = await userModel.findById(userId);
+    const user = await userModel.findById(id);
 
-    jwt.verify(user.token, "deniel", async (error, result) => {
+    jwt.verify(token, "cat", async (error, result) => {
       if (error) {
         return res.status(404).json({
           message: "Email Expired",

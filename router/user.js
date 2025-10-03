@@ -26,7 +26,7 @@ router.post("/verify-code", verifyValidator, verifyCode);
 router.get("/", checkAuth);
 
 router.post("/password", forgetPassword);
-router.post("/reset/:id", resetPasswordValidator, resetPassword);
+router.post("/reset/:id/:token", resetPasswordValidator, resetPassword);
 router.put("/password", checkLogin, changePassword);
 
 module.exports = router;
