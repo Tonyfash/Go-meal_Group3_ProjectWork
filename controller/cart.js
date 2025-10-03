@@ -1,4 +1,3 @@
-// controller/cartController.js
 const Cart = require("../model/cart");
 const Product = require("../model/product");
 
