@@ -2,6 +2,7 @@ const Product = require("../model/product");
 const Kitchen = require("../model/kitchen");
 const Category = require("../model/category");
 
+
 exports.seedProducts = async (req, res) => {
   try {
     // Delete all existing products
@@ -181,7 +182,8 @@ exports.seedProducts = async (req, res) => {
             price: 2500,
           },
 
-          { productName: "Butter Pie", productImage: "https://res.cloudinary.com/ddyfrlx7e/image/upload/v1759407114/bpie_hixjls.jpg", price: 2000 },
+          { productName: "Butter Pie", productImage: "https://res.cloudinary.com/ddyfrlx7e/image/upload/v1759407114/bpie_hixjls.jpg", 
+            price: 2000 },
 
           {
             productName: "Queen Cake",
