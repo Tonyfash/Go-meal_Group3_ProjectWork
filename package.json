@@ -25,6 +25,7 @@
     "mailgun.js": "^12.1.0",
     "mongoose": "^8.18.2",
     "multer": "^2.0.2",
+    "nanoid": "^5.1.7",
     "nodemailer": "^7.0.6",
     "otp-generator": "^4.0.1"
   }

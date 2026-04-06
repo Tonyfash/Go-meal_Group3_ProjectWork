@@ -45,6 +45,16 @@ const userSchema = new mongoose.Schema(
     otpExpiredAt: {
       type: Number,
     },
+    loyaltyPoints: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    lifetimeSavings: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
   },
   { timestamps: true }
 );

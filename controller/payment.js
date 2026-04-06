@@ -3,6 +3,7 @@ const productModel = require("../model/product");
 const paymentModel = require("../model/payment");
 const axios = require("axios");
 const otpGen = require("otp-generator");
+const { promoHelpers } = require("./promo");
 
 exports.initializePayment = async (req, res) => {
   try {
@@ -84,8 +85,23 @@ exports.verifyPayment = async (req, res) => {
     console.log(data);
 
     if (data.status === true && data.data.status === "success") {
+      const wasAlreadySuccessful = payment.status === "Successful";
       Object.assign(payment, { status: "Successful" });
       await payment.save();
+
+      if (!wasAlreadySuccessful) {
+        const earnedPoints = promoHelpers.getRewardPoints(payment.price);
+        await userModel.findByIdAndUpdate(
+          payment.userId,
+          {
+            $inc: {
+              loyaltyPoints: earnedPoints,
+            },
+          },
+          { new: true }
+        );
+      }
+
       res.status(200).json({
         message: "Payment successful",
       });
