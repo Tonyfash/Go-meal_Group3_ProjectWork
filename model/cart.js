@@ -22,6 +22,11 @@ const cartSchema = new mongoose.Schema(
         },
       },
     ],
+    appliedPromo: {
+      code: { type: String, default: null },
+      discount: { type: Number, default: 0 },
+      totalAfterDiscount: { type: Number, default: 0 },
+    },
   },
   {
     timestamps: true,

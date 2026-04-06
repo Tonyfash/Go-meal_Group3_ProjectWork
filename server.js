@@ -12,6 +12,7 @@ const kitchenRouter = require("./router/kitchen");
 const categoryRouter = require("./router/category");
 const jwt = require("jsonwebtoken");
 const cartRouter = require("./router/cart");
+const promoRouter = require("./router/promo");
 
 const app = express();
 
@@ -24,6 +25,7 @@ app.use("/api/v1", productRouter);
 app.use("/api/v1", kitchenRouter);
 app.use("/api/v1", categoryRouter);
 app.use("/api/v1", cartRouter);
+app.use("/api/v1", promoRouter);
 
 
 mongoose
