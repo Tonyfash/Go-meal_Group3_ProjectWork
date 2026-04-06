@@ -1,6 +1,318 @@
 const Product = require("../model/product");
 const Kitchen = require("../model/kitchen");
 const Category = require("../model/category");
+const Cart = require("../model/cart");
+
+const PRODUCT_POPULATION = [
+  { path: "kitchen", select: "kitchenName" },
+  { path: "category", select: "name" },
+];
+
+const parseNumberQuery = (value) => {
+  if (value === undefined || value === null || value === "") {
+    return null;
+  }
+
+  const parsedValue = Number(value);
+  return Number.isFinite(parsedValue) ? parsedValue : null;
+};
+
+const buildProductFilters = (query) => {
+  const filters = {};
+  const minPrice = parseNumberQuery(query.minPrice);
+  const explicitMaxPrice = parseNumberQuery(query.maxPrice);
+  const budget = parseNumberQuery(query.budget);
+  const maxPrice = explicitMaxPrice ?? budget;
+
+  if (query.search) {
+    filters.productName = { $regex: query.search.trim(), $options: "i" };
+  }
+
+  if (query.kitchenId) {
+    filters.kitchen = query.kitchenId;
+  }
+
+  if (query.categoryId) {
+    filters.category = query.categoryId;
+  }
+
+  if (minPrice !== null || maxPrice !== null) {
+    filters.price = {};
+
+    if (minPrice !== null) {
+      filters.price.$gte = minPrice;
+    }
+
+    if (maxPrice !== null) {
+      filters.price.$lte = maxPrice;
+    }
+  }
+
+  return { filters, minPrice, maxPrice, budget };
+};
+
+const buildSortOption = (sortBy) => {
+  switch (sortBy) {
+    case "price_asc":
+      return { price: 1, productName: 1 };
+    case "price_desc":
+      return { price: -1, productName: 1 };
+    case "name":
+      return { productName: 1 };
+    case "oldest":
+      return { createdAt: 1 };
+    case "latest":
+    default:
+      return { createdAt: -1 };
+  }
+};
+
+const summarizeProducts = (products) => {
+  if (!products.length) {
+    return {
+      price: { lowest: 0, highest: 0, average: 0 },
+      kitchens: [],
+      categories: [],
+      highlights: [],
+    };
+  }
+
+  const prices = products.map((product) => product.price);
+  const averagePrice = prices.reduce((total, price) => total + price, 0) / prices.length;
+  const sortedByPrice = [...products].sort((firstProduct, secondProduct) => firstProduct.price - secondProduct.price);
+
+  return {
+    price: {
+      lowest: Math.min(...prices),
+      highest: Math.max(...prices),
+      average: Number(averagePrice.toFixed(2)),
+    },
+    kitchens: [...new Set(products.map((product) => product.kitchen?.kitchenName).filter(Boolean))],
+    categories: [...new Set(products.map((product) => product.category?.name).filter(Boolean))],
+    highlights: [
+      {
+        label: "budget_pick",
+        product: sortedByPrice[0]?.productName || null,
+      },
+      {
+        label: "premium_pick",
+        product: sortedByPrice[sortedByPrice.length - 1]?.productName || null,
+      },
+    ],
+  };
+};
+
+const buildRecommendationContext = (cart) => {
+  const items = cart?.items || [];
+  const kitchenPreferences = {};
+  const categoryPreferences = {};
+  const cartProductIds = [];
+  const prices = [];
+
+  items.forEach((item) => {
+    const product = item.product;
+
+    if (!product?._id) {
+      return;
+    }
+
+    const quantity = item.quantity || 1;
+    const productId = product._id.toString();
+    const kitchenId = product.kitchen?._id?.toString();
+    const categoryId = product.category?._id?.toString();
+
+    cartProductIds.push(productId);
+    prices.push(product.price);
+
+    if (kitchenId) {
+      kitchenPreferences[kitchenId] = (kitchenPreferences[kitchenId] || 0) + quantity;
+    }
+
+    if (categoryId) {
+      categoryPreferences[categoryId] = (categoryPreferences[categoryId] || 0) + quantity;
+    }
+  });
+
+  const averagePrice = prices.length
+    ? prices.reduce((total, price) => total + price, 0) / prices.length
+    : 0;
+
+  return {
+    cartProductIds,
+    kitchenPreferences,
+    categoryPreferences,
+    averagePrice,
+  };
+};
+
+const buildPreferenceSummary = (preferences, entries, labelField) => {
+  const topEntry = entries
+    .filter((entry) => entry?.[labelField]?._id)
+    .sort((firstEntry, secondEntry) => {
+      const secondScore = preferences[secondEntry[labelField]._id.toString()] || 0;
+      const firstScore = preferences[firstEntry[labelField]._id.toString()] || 0;
+      return secondScore - firstScore;
+    })[0];
+
+  if (!topEntry?.[labelField]) {
+    return null;
+  }
+
+  return {
+    id: topEntry[labelField]._id,
+    name: topEntry[labelField].kitchenName || topEntry[labelField].name,
+  };
+};
+
+const scoreRecommendation = (product, context, budget) => {
+  const reasons = [];
+  let score = 0;
+  const kitchenId = product.kitchen?._id?.toString();
+  const categoryId = product.category?._id?.toString();
+
+  if (kitchenId && context.kitchenPreferences[kitchenId]) {
+    score += context.kitchenPreferences[kitchenId] * 4;
+    reasons.push(`Matches your ${product.kitchen.kitchenName} preference`);
+  }
+
+  if (categoryId && context.categoryPreferences[categoryId]) {
+    score += context.categoryPreferences[categoryId] * 3;
+    reasons.push(`Fits your taste for ${product.category.name}`);
+  }
+
+  if (context.averagePrice) {
+    const priceDistance = Math.abs(product.price - context.averagePrice);
+    const priceScore = Math.max(0, 8 - priceDistance / 500);
+    score += priceScore;
+
+    if (priceDistance <= 1000) {
+      reasons.push("Sits close to your usual spend");
+    }
+  }
+
+  if (budget !== null) {
+    if (product.price <= budget) {
+      score += 6;
+      reasons.push("Fits your budget");
+    } else {
+      score -= 20;
+    }
+  }
+
+  if (product.price <= 2500) {
+    score += 1;
+  }
+
+  return {
+    ...product.toObject(),
+    recommendationScore: Number(score.toFixed(2)),
+    recommendationReasons: reasons.slice(0, 3),
+  };
+};
+
+const buildMealPlanReasoning = (combo, budget, distinctKitchenCount, distinctCategoryCount) => {
+  const reasons = [];
+  const totalPrice = combo.reduce((total, product) => total + product.price, 0);
+  const budgetGap = budget - totalPrice;
+
+  if (budgetGap >= 0 && budgetGap <= 1000) {
+    reasons.push("Uses your budget efficiently");
+  }
+
+  if (distinctCategoryCount > 1) {
+    reasons.push("Gives you a more varied meal mix");
+  }
+
+  if (distinctKitchenCount > 1) {
+    reasons.push("Combines standout items across kitchens");
+  }
+
+  if (combo.length >= 3) {
+    reasons.push("Builds a fuller order instead of a single-item pick");
+  }
+
+  return reasons.slice(0, 3);
+};
+
+const scoreMealPlan = (combo, budget, options) => {
+  const totalPrice = combo.reduce((total, product) => total + product.price, 0);
+  const distinctKitchens = new Set(combo.map((product) => product.kitchen?._id?.toString()).filter(Boolean));
+  const distinctCategories = new Set(combo.map((product) => product.category?._id?.toString()).filter(Boolean));
+  const budgetUsageScore = Math.max(0, 30 - Math.abs(budget - totalPrice) / 100);
+  const varietyScore = distinctCategories.size * 6 + distinctKitchens.size * 4;
+  const sizeScore = combo.length * 3;
+  let preferenceScore = 0;
+
+  combo.forEach((product) => {
+    if (options.kitchenId && product.kitchen?._id?.toString() === options.kitchenId) {
+      preferenceScore += 6;
+    }
+
+    if (options.categoryId && product.category?._id?.toString() === options.categoryId) {
+      preferenceScore += 5;
+    }
+
+    if (options.search && product.productName.toLowerCase().includes(options.search.toLowerCase())) {
+      preferenceScore += 4;
+    }
+  });
+
+  const score = budgetUsageScore + varietyScore + sizeScore + preferenceScore;
+
+  return {
+    totalPrice,
+    score: Number(score.toFixed(2)),
+    reasons: buildMealPlanReasoning(combo, budget, distinctKitchens.size, distinctCategories.size),
+  };
+};
+
+const buildMealPlans = (products, budget, maxItems, options) => {
+  const mealPlans = [];
+  const candidateProducts = [...products]
+    .sort((firstProduct, secondProduct) => firstProduct.price - secondProduct.price)
+    .slice(0, 18);
+
+  const exploreCombinations = (startIndex, currentCombo, currentTotal) => {
+    if (currentCombo.length > 0) {
+      const scoring = scoreMealPlan(currentCombo, budget, options);
+
+      mealPlans.push({
+        items: currentCombo.map((product) => product.toObject()),
+        totalPrice: scoring.totalPrice,
+        remainingBudget: Number((budget - scoring.totalPrice).toFixed(2)),
+        mealPlanScore: scoring.score,
+        reasons: scoring.reasons,
+      });
+    }
+
+    if (currentCombo.length === maxItems) {
+      return;
+    }
+
+    for (let index = startIndex; index < candidateProducts.length; index += 1) {
+      const product = candidateProducts[index];
+      const nextTotal = currentTotal + product.price;
+
+      if (nextTotal > budget) {
+        continue;
+      }
+
+      exploreCombinations(index + 1, [...currentCombo, product], nextTotal);
+    }
+  };
+
+  exploreCombinations(0, [], 0);
+
+  return mealPlans
+    .sort((firstPlan, secondPlan) => {
+      if (secondPlan.mealPlanScore !== firstPlan.mealPlanScore) {
+        return secondPlan.mealPlanScore - firstPlan.mealPlanScore;
+      }
+
+      return firstPlan.remainingBudget - secondPlan.remainingBudget;
+    })
+    .slice(0, 3);
+};
 
 
 exports.seedProducts = async (req, res) => {
@@ -545,13 +857,106 @@ exports.seedProducts = async (req, res) => {
 
 exports.getAllProducts = async (req, res) => {
   try {
-    const products = await Product.find().populate("kitchen", "kitchenName").populate("category", "categoryName");
+    const { filters, minPrice, maxPrice, budget } = buildProductFilters(req.query);
+    const sortBy = req.query.sortBy || "latest";
+    const page = Math.max(parseNumberQuery(req.query.page) || 1, 1);
+    const limit = Math.min(Math.max(parseNumberQuery(req.query.limit) || 12, 1), 50);
+    const skip = (page - 1) * limit;
+
+    const totalProducts = await Product.countDocuments(filters);
+    const products = await Product.find(filters)
+      .populate(PRODUCT_POPULATION)
+      .sort(buildSortOption(sortBy))
+      .skip(skip)
+      .limit(limit);
+
+    const insights = summarizeProducts(products);
 
     res.status(200).json({
       success: true,
       count: products.length,
+      totalMatchedProducts: totalProducts,
       data: products,
+      filters: {
+        search: req.query.search || null,
+        kitchenId: req.query.kitchenId || null,
+        categoryId: req.query.categoryId || null,
+        minPrice,
+        maxPrice,
+        budget,
+        sortBy,
+      },
+      pagination: {
+        page,
+        limit,
+        totalPages: Math.ceil(totalProducts / limit),
+      },
+      insights,
       message: "Products retrieved successfully",
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+
+exports.getSmartMealPlan = async (req, res) => {
+  try {
+    const budget = parseNumberQuery(req.query.budget);
+    const maxItems = Math.min(Math.max(parseNumberQuery(req.query.maxItems) || 3, 1), 4);
+
+    if (budget === null || budget <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "A valid budget query is required for meal planning",
+      });
+    }
+
+    const { filters } = buildProductFilters({
+      search: req.query.search,
+      kitchenId: req.query.kitchenId,
+      categoryId: req.query.categoryId,
+      maxPrice: budget,
+    });
+
+    const products = await Product.find(filters)
+      .populate(PRODUCT_POPULATION)
+      .sort({ price: 1, createdAt: -1 });
+
+    if (!products.length) {
+      return res.status(404).json({
+        success: false,
+        message: "No products match this budget or preference combination",
+      });
+    }
+
+    const mealPlans = buildMealPlans(products, budget, maxItems, {
+      kitchenId: req.query.kitchenId || null,
+      categoryId: req.query.categoryId || null,
+      search: req.query.search || null,
+    });
+
+    if (!mealPlans.length) {
+      return res.status(404).json({
+        success: false,
+        message: "Unable to build a meal plan with the current budget",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      budget,
+      count: mealPlans.length,
+      preferences: {
+        kitchenId: req.query.kitchenId || null,
+        categoryId: req.query.categoryId || null,
+        search: req.query.search || null,
+        maxItems,
+      },
+      data: mealPlans,
+      message: "Smart meal plans generated successfully",
     });
   } catch (err) {
     res.status(500).json({
@@ -565,7 +970,7 @@ exports.getProduct = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const product = await Product.findById(id).populate("kitchen", "kitchenName").populate("category", "categoryName");
+    const product = await Product.findById(id).populate(PRODUCT_POPULATION);
 
     if (!product) {
       return res.status(404).json({
@@ -577,6 +982,70 @@ exports.getProduct = async (req, res) => {
     res.status(200).json({
       success: true,
       data: product,
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+
+exports.getRecommendedProducts = async (req, res) => {
+  try {
+    const budget = parseNumberQuery(req.query.budget);
+    const limit = Math.min(Math.max(parseNumberQuery(req.query.limit) || 6, 1), 20);
+
+    const cart = await Cart.findOne({ user: req.user }).populate({
+      path: "items.product",
+      populate: PRODUCT_POPULATION,
+    });
+
+    const context = buildRecommendationContext(cart);
+    const recommendationFilters = {};
+
+    if (context.cartProductIds.length) {
+      recommendationFilters._id = { $nin: context.cartProductIds };
+    }
+
+    if (budget !== null) {
+      recommendationFilters.price = { $lte: budget };
+    }
+
+    const recommendationPool = await Product.find(recommendationFilters)
+      .populate(PRODUCT_POPULATION)
+      .sort({ createdAt: -1 })
+      .limit(40);
+
+    if (!recommendationPool.length) {
+      return res.status(404).json({
+        success: false,
+        message: "No recommendations available for the selected budget",
+      });
+    }
+
+    const personalizedProducts = recommendationPool
+      .map((product) => scoreRecommendation(product, context, budget))
+      .sort((firstProduct, secondProduct) => secondProduct.recommendationScore - firstProduct.recommendationScore)
+      .slice(0, limit);
+
+    const favoriteKitchen = buildPreferenceSummary(context.kitchenPreferences, personalizedProducts, "kitchen");
+    const favoriteCategory = buildPreferenceSummary(context.categoryPreferences, personalizedProducts, "category");
+
+    res.status(200).json({
+      success: true,
+      count: personalizedProducts.length,
+      data: personalizedProducts,
+      personalization: {
+        budget,
+        averageCartPrice: Number(context.averagePrice.toFixed(2)),
+        favoriteKitchen,
+        favoriteCategory,
+        basedOnCartItems: context.cartProductIds.length,
+      },
+      message: context.cartProductIds.length
+        ? "Personalized recommendations generated successfully"
+        : "Starter recommendations generated successfully",
     });
   } catch (err) {
     res.status(500).json({
